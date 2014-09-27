@@ -17,12 +17,32 @@ empiricalBias = [
     [0.99, 1.0, 0.99, 1.0, 0.99, 1.0, 1.0, 0.99, 1.0, 0.99]
 ]
 
+# P( pos=N-1, val=x ) = 1/N
+# P( pos=i, val=x ) == P( pos=x, val=i )
+# P( pos=i, val=0 ) = 1/N
+
 def probabilityBadPosition( position, value, N ):
     # TODO
     return 1.0 / N
 
 def probabilityGoodPosition( position, value, N ):
     return 1.0 / N
+
+# P( bad | list ) = P( list | bad ) * P( bad ) / (P( list | good ) + P( list | bad ))
+#                 = 0.5 / (P( list | good ) / P( list | bad) + 1)
+# P( list | bad ) = Product( P( i, list[i] ) )
+
+def positionFeature( list ):
+    average = 1.0
+    quant = 10.0 / len( list )
+    for i in xrange( len( list ) ):
+        factor = empiricalBias[ int( i * quant ) ][ int( list[i] * quant ) ]
+        average *= factor
+
+        #average = 0.5 / (1 + average)
+
+    return average
+        
 
 def generateFeatures( list ):
     mid = len( list ) / 2
@@ -41,10 +61,16 @@ def generateFeatures( list ):
     weightedMean /= len( list )
 
     return {
+        'biasprod' : positionFeature( list ),
         'sideMeanDelta' : mean1 / mean2,
         'weightedMean' : weightedMean / len( list ) / len( list ) / 0.25,
         'firstVal' : float( list[0] ) / len( list ) / 0.5,
         }
+
+def biasprod( list ):
+    features = generateFeatures( list )
+    print "%f" % ( features["biasprod"] )
+    return features["biasprod"] <= 0.9
 
 def weightedMean( list ):
     features = generateFeatures( list )
@@ -76,7 +102,7 @@ def adhoc( list ):
         return firstVal( list )
 
 def tryClassifier( classifier, name ):
-    N = 1000
+    N = 100
     correct = 0
     correctGood = 0
     correctBad = 0
@@ -101,6 +127,7 @@ def main():
     tryClassifier( weightedMean, "weightedMean" )
     tryClassifier( sideMean, "sideMean" )
     tryClassifier( firstVal, "firstVal" )
+    tryClassifier( biasprod, "biasprod" )
     tryClassifier( adhoc, "adhoc" )
     tryClassifier( combined, "combined" )
 
