@@ -2,6 +2,7 @@
 
 import gbrand
 import random
+import math
 
 # P( value in position ) = empiricalBias[position][value]
 empiricalBias = [
@@ -18,7 +19,7 @@ empiricalBias = [
 ]
 
 # P( pos=N-1, val=x ) = 1/N
-# P( pos=i, val=x ) == P( pos=x, val=i )
+# P( pos=i, val=x ) == P( pos=N-1 - x, val=N-1 - i )
 # P( pos=i, val=0 ) = 1/N
 
 def probabilityBadPosition( position, value, N ):
@@ -29,19 +30,24 @@ def probabilityGoodPosition( position, value, N ):
     return 1.0 / N
 
 # P( bad | list ) = P( list | bad ) * P( bad ) / (P( list | good ) + P( list | bad ))
-#                 = 0.5 / (P( list | good ) / P( list | bad) + 1)
+#                 = 0.5 / ( 1/(N ** N) / P( list | bad ) + 1)
 # P( list | bad ) = Product( P( i, list[i] ) )
 
 def positionFeature( list ):
-    average = 1.0
+    averageGeometric = 1.0
+    averageArithmetic = 0
+
     quant = 10.0 / len( list )
     for i in xrange( len( list ) ):
         factor = empiricalBias[ int( i * quant ) ][ int( list[i] * quant ) ]
-        average *= factor
+#        print "  a[%d] = %d => %f (%d,%d)" % ( i, list[i], factor, int( i * quant ), int( list[i] * quant ) )
+        averageGeometric += math.log( factor )
+        averageArithmetic += factor
 
-        #average = 0.5 / (1 + average)
+    bayesProb = 0.5 / (1 + 1 / math.exp( averageGeometric ) )
+    print "+:%0.2f *:%0.2f P:%0.2f" % (averageArithmetic / len(list), math.exp( averageGeometric ), bayesProb)
 
-    return average
+    return math.exp( averageGeometric )
         
 
 def generateFeatures( list ):
@@ -70,7 +76,7 @@ def generateFeatures( list ):
 def biasprod( list ):
     features = generateFeatures( list )
     print "%f" % ( features["biasprod"] )
-    return features["biasprod"] <= 0.9
+    return features["biasprod"] <= 1
 
 def weightedMean( list ):
     features = generateFeatures( list )
@@ -110,10 +116,12 @@ def tryClassifier( classifier, name ):
     for i in xrange( 60 ):
         attempts += 2
         good = gbrand.goodShuffle( N )
+        print "good"
         if classifier( good ):
             correct += 1
             correctGood += 1
         bad = gbrand.badShuffle( N )
+        print "bad"
         if not classifier( bad ):
             correct += 1
             correctBad += 1
@@ -123,11 +131,12 @@ def tryClassifier( classifier, name ):
     print "  %d out of %d bad correct (%f%%)" % ( correctBad, attempts / 2, 200.0 * correctBad / attempts )
 
 def main():
+    tryClassifier( biasprod, "biasprod" )
+    return
     tryClassifier( lambda x: True, "true" )
     tryClassifier( weightedMean, "weightedMean" )
     tryClassifier( sideMean, "sideMean" )
     tryClassifier( firstVal, "firstVal" )
-    tryClassifier( biasprod, "biasprod" )
     tryClassifier( adhoc, "adhoc" )
     tryClassifier( combined, "combined" )
 
