@@ -30,10 +30,10 @@ def probabilityGoodPosition( position, value, N ):
     return 1.0 / N
 
 # P( bad | list ) = P( list | bad ) * P( bad ) / (P( list | good ) + P( list | bad ))
-#                 = 0.5 / ( 1/(N ** N) / P( list | bad ) + 1)
+#                 = 0.5 / ( 1/(nPn) / P( list | bad ) + 1)
 # P( list | bad ) = Product( P( i, list[i] ) )
 
-def positionFeature( list ):
+def positionFeatureSave( list ):
     averageGeometric = 1.0
     averageArithmetic = 0
 
@@ -48,6 +48,24 @@ def positionFeature( list ):
     print "+:%0.2f *:%0.2f P:%0.2f" % (averageArithmetic / len(list), math.exp( averageGeometric ), bayesProb)
 
     return math.exp( averageGeometric )
+
+def positionFeature( list ):
+    logProb = 0
+
+    quant = 10.0 / len( list )
+    def pAt( i, j ):
+        return empiricalBias[ int( i * quant ) ][ int( j * quant ) ] / float( len( list ) )
+
+    for i in xrange( len( list ) - 1, -1, -1 ):
+        thisFactor = pAt( i, list[i] )
+        sumPrevFactor = sum( map( lambda x: pAt( x, list[i] ), xrange( i )  ) )
+        logProb += math.log( thisFactor / (thisFactor + sumPrevFactor) )
+
+    bayesProb = 0.5 / (1 + 1 / math.exp( logProb ) )
+
+    print "%f => %f" % ( logProb, bayesProb )
+
+    return bayesProb
         
 
 def generateFeatures( list ):

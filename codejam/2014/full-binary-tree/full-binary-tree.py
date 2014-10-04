@@ -8,7 +8,6 @@ class Graph:
     def __init__( self, count ):
         self.count = count
         self.nodes = frozenset( map( lambda x: x, xrange( self.count ) ) )
-        self.removed = frozenset()
         self.edges = map( lambda x: [], xrange( self.count ) )
 
     def addEdge( self, edge ):
@@ -22,10 +21,79 @@ class Graph:
         newgraph.edges[ node ] = []
         for n in self.edges[ node ]:
             newgraph.edges[ n ].remove( node )
-        newgraph.removed = self.removed | frozenset( [ node ] )
         return newgraph
 
+
+    def dfsFindTree( self, node, visited = frozenset( [] ) ):
+        ret = frozenset( [ node ] )
+
+        for otherNode in filter( lambda x: x not in visited, self.edges[ node ] ):
+            ret = ret | self.dfsFindTree( otherNode, visited | frozenset( [ otherNode ] ) )
+
+        return ret
+
+    def findDisjointTrees( self ):
+        trees = []
+        for n in self.nodes:
+            if len( filter( lambda x: n in x, trees ) ) == 0:
+                trees.append( self.dfsFindTree( n ) )
+
+        return trees
+
+    def removeSingletons( self ):
+        removed = frozenset( [] )
+        build = self
+
+        for n in self.nodes:
+            if len( self.edges[ n ] ) == 0:
+                removed = removed | n
+                build = build.removeNode( n )
+
+        return ( removed, build )
+
+    def truncateChain( self ):
+        for n in self.nodes:
+            if len( self.edges[n] ) == 1: # Leave
+                next = self.edges[n][0]
+                if len( self.edges[next] ) == 2: # Not full
+                    nextNext = filter( lambda x: x != n, self.edges[next] )[0]
+                    if len( self.edges[nextNext] ) > 1: # Not a valid 3 node tree
+                        return ( frozenset( [ n ] ), self.removeNode( n ) )
+
+        return ( frozenset( [] ), self )
+
+    def findForceRemove( self ):
+        trees = self.findDisjointTrees()
+
+        if len( trees ) > 1:
+            raise Exception( "should purne tree" )
+
+        removed = frozenset( [] )
+        build = self
+        more = True
+        while more:
+            more = False
+            ( newRemoved, newBuild ) = build.removeSingletons()
+            if len( newRemoved ) > 0:
+                more = True
+                removed = removed | newRemoved
+                build = newBuild
+
+        more = True
+        while more:
+            more = False
+            ( newRemoved, newBuild ) = build.truncateChain()
+            if len( newRemoved ) > 0:
+                more = True
+                removed = removed | newRemoved
+                build = newBuild
+            
+        return ( removed, build )
+            
     def isFull( self ):
+        if len( self.nodes ) == 1:
+            return True
+
         edgecount = [ [], [], [], [], [] ]
 
         for n in self.nodes:
@@ -59,24 +127,27 @@ class Graph:
         return self.dfsReachableFull( root, None ) == self.nodes
 
     def findFull( self ):
-        if len( self.nodes ) == 0:
-            return self.removed
-
         if self.isFull():
-            return self.removed
+            return []
 
-        #print "%sfindFull( %r )" % ( "  " * len( self.removed ), self.nodes )
+        ( preRemove, subG ) = ( frozenset(), self )
+        #( preRemove, subG ) = self.findForceRemove()
 
-        subsetgen = SubsetGenerator.SubsetGenerator( len( self.nodes ) )
+        #for n in self.nodes:
+        #    print "%d: %r" % ( n, self.edges[n] )
+        #print "preRemove = %r" % preRemove
+
+        if not subG.isFull():
+            subsetgen = SubsetGenerator.SubsetGenerator( self.nodes - preRemove )
         
-        for subset in subsetgen:
-            subG = self
-            for node in subset:
-                subG = subG.removeNode( node )
-            if subG.isFull():
-                return subset
+            for subset in subsetgen:
+                subSubG = subG
+                for node in subset:
+                    subSubG = subSubG.removeNode( node )
+                if subSubG.isFull():
+                    return preRemove | frozenset( subset )
 
-        return None
+        return preRemove
 
 def singleTest( testNum ):
     nodeCount = int( sys.stdin.readline() )
@@ -88,7 +159,7 @@ def singleTest( testNum ):
         graph.addEdge( edge )
 
     removed = graph.findFull()
-
+    
     print "Case #%d: %d" % ( testNum, len( removed ) )
     #print "Case #%d: %d # %r %r" % ( testNum, len( removed ), graph.edges, removed )
 

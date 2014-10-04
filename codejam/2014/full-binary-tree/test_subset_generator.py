@@ -9,5 +9,5 @@ for t in SubsetGenerator.SubsetGeneratorSize( 10, 1 ):
 for t in SubsetGenerator.SubsetGeneratorSize( 10, 2 ):
     print "%r" % t
 
-for t in SubsetGenerator.SubsetGenerator( 3 ):
+for t in SubsetGenerator.SubsetGenerator( frozenset( [ "a", "b", "c" ] ) ):
     print "%r" % t
