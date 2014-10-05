@@ -126,15 +126,50 @@ class Graph:
     def dfsIsFull( self, root ):
         return self.dfsReachableFull( root, None ) == self.nodes
 
+    def growRoot( self, node, visited = frozenset() ):
+        tree = frozenset( [ node ] )
+
+        subtrees = filter( lambda x: x not in visited, self.edges[ node ] )
+        if len( subtrees ) < 1:
+            return tree
+
+        newVisit = visited | tree
+
+        subtrees = map( lambda x: self.growRoot( x, newVisit ), subtrees )
+
+        subtrees = sorted( subtrees, key=lambda x: -len( x ) )
+
+        if len( subtrees ) > 1:
+            tree = tree | subtrees[0] | subtrees[1]
+                
+        return tree
+
+    def findFullGrowRoot( self ):
+        toRemove = None
+
+        for n in self.nodes:
+            tree = self.growRoot( n )
+            #print "  growRoot( %d ) => %r" % ( n, tree )
+            if tree is not None:
+                newToRemove = self.nodes - tree
+                if toRemove is None or len( newToRemove ) < len( toRemove ):
+                    toRemove = newToRemove
+
+        return toRemove
+
+
     def findFull( self ):
+        #for n in self.nodes:
+        #    print "%d: %r" % ( n, self.edges[n] )
+
+        return self.findFullGrowRoot()
+        
         if self.isFull():
             return []
 
         ( preRemove, subG ) = ( frozenset(), self )
         #( preRemove, subG ) = self.findForceRemove()
 
-        #for n in self.nodes:
-        #    print "%d: %r" % ( n, self.edges[n] )
         #print "preRemove = %r" % preRemove
 
         if not subG.isFull():
@@ -157,6 +192,8 @@ def singleTest( testNum ):
         if len( edge ) != 2:
             raise Exception( "Edge %r doesn't have two points" % edge )
         graph.addEdge( edge )
+
+    sys.setrecursionlimit( 10000 )
 
     removed = graph.findFull()
     
