@@ -1,5 +1,7 @@
 testnum = 0
 
+import sys
+
 def no_plan():
     print "1.."
 
@@ -13,6 +15,9 @@ def done_testing():
 def note( str ):
     print "# %s" % str
 
+def diag( str ):
+    sys.stderr.write( "# %s\n" % str )
+
 def ok( message=None ):
     global testnum
     testnum += 1
@@ -21,6 +26,7 @@ def ok( message=None ):
     else:
         message = ""
     print "ok %d%s" % ( testnum, message )
+    return True
 
 def fail( message=None ):
     global testnum
@@ -30,15 +36,23 @@ def fail( message=None ):
     else:
         message = ""
     print "not ok %d%s" % ( testnum, message )
+    return False
 
 def isval( a, b, message=None ):
     if a == b:
-        ok( message )
+        return ok( message )
     else:
         fail( message )
+        diag( "  Values differ" )
+        diag( "  got=%r" % a )
+        diag( "  expected=%r" % b )
+        return False
 
 def isnt( a, b, message=None ):
     if a != b:
-        ok( message )
+        return ok( message )
     else:
         fail( message )
+        diag( "  Values are the same" )
+        diag( "  got=expected=%r" % a )
+        return False
