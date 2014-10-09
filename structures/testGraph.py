@@ -25,3 +25,5 @@ clique.dfs( onDfs )
 
 TAP.isval( parentsBfs, [ 0, 0, 0, 0, 0, 0, 0 ] )
 TAP.isval( parentsDfs, [ 0, 0, 1, 2, 3, 4, 5 ] )
+
+TAP.done_testing()
