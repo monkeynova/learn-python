@@ -1,11 +1,13 @@
 #!/usr/bin/python
 
 import random
-import timeit
+import time
 
 class Choice:
-    ALL_COLORS = frozenset({"RED", "BLUE", "GREEN", "YELLOW", "BLACK", "BROWN"})
+    ALL_COLORS = list(xrange(0,5))
+    COLOR_NAMES = list({"RED", "BLUE", "GREEN", "YELLOW", "BLACK", "BROWN"})
     NUM_COLORS = 4
+    _all_choices = list()
 
     def __init__(self, colors):
         if (len(colors) != Choice.NUM_COLORS):
@@ -16,7 +18,7 @@ class Choice:
         self._colors = colors
 
     def __str__(self):
-        return str(self._colors)
+        return str([COLOR_NAMES[c] for c in self._colors])
 
     @staticmethod
     def All(prefix = []):
@@ -28,6 +30,7 @@ class Choice:
                 for c in Choice.All(next_prefix):
                     yield c
 
+
 class Board:
     GUESS_COUNT = 10
     
@@ -36,7 +39,7 @@ class Board:
         black_pegs = 0
         white_pegs = 0
 
-        colors = {c:0 for c in Choice.ALL_COLORS} 
+        colors = [0 for c in Choice.ALL_COLORS]
         for i in xrange(0, Choice.NUM_COLORS):
             hidden_color = hidden._colors[i]
             if (hidden_color == guess._colors[i]):
@@ -51,6 +54,7 @@ class Board:
         white_pegs = white_pegs - black_pegs
 
         return (black_pegs, white_pegs)
+
 
 class Strategy:
     def NextGuess(self):
@@ -78,13 +82,38 @@ class RandomStrategy(Strategy):
 
 class RandomAllowedStrategy(Strategy):
     def __init__(self):
+        self._all_choices = list(Choice.All())
         self.Reset()
 
     def Reset(self):
-        self._valid_choices = list(Choice.All())
-        
+        self._valid_choices = self._all_choices
+
     def NextGuess(self):
         return random.choice(self._valid_choices)
+
+    def AddEvaluation(self, guess, evaluation):
+        new_valid_choices = []
+        for potential_hidden in self._valid_choices:
+            if Board.ScoreChoice(potential_hidden, guess) == evaluation:
+                new_valid_choices = new_valid_choices + [potential_hidden]
+        self._valid_choices = new_valid_choices
+
+
+class MaximizeDecisivenessStrategy(Strategy):
+    def __init__(self):
+        self._all_choices = list(Choice.All())
+        self.Reset()
+
+    def Reset(self):
+        self._valid_choices = self._all_choices
+        
+    def NextGuess(self):
+        return min(self._valid_choices,
+                   key=MaximizeDecisivenessStrategy.CheckDiscrepency)
+
+    @staticmethod
+    def CheckDiscrepency(guess):
+        return 1
 
     def AddEvaluation(self, guess, evaluation):
         new_valid_choices = []
@@ -95,6 +124,7 @@ class RandomAllowedStrategy(Strategy):
         
 
 def EvaluateStrategy(strategy):
+    start = time.time()
     guess_counts = {i:0 for i in xrange(-1,Board.GUESS_COUNT + 1)}
     for hidden in Choice.All():
         guess_count = -1
@@ -107,7 +137,8 @@ def EvaluateStrategy(strategy):
                 guess_count = x
                 break
         guess_counts[guess_count] = guess_counts[guess_count] + 1
-    return guess_counts
+    end = time.time()
+    return {"guesses" : guess_counts, "time" : end - start};
     
 
 def TestScoreChoice():
@@ -120,8 +151,11 @@ def TestScoreChoice():
         print "h:%s g:%s -> %s" % (hidden, guess, score)
     
 def main():
-    print "RandomStrategy: %s" % EvaluateStrategy(RandomStrategy())
-    print "RandomAllowedStrategy: %s" % EvaluateStrategy(RandomAllowedStrategy())
+    strategies =(("Random", RandomStrategy()),
+                 ("RandomAllowed", RandomAllowedStrategy()),
+                 ("MaximizeDecisiveness", MaximizeDecisivenessStrategy()))
+    for (name, strategy) in strategies:
+        print "%s: %s" % (name, EvaluateStrategy(strategy))
 
 if __name__ == "__main__":
     main()
