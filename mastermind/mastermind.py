@@ -4,8 +4,8 @@ import random
 import time
 
 class Choice:
-    ALL_COLORS = list(xrange(0,5))
-    COLOR_NAMES = list({"RED", "BLUE", "GREEN", "YELLOW", "BLACK", "BROWN"})
+    ALL_COLORS = list(xrange(8))
+    COLOR_NAMES = list({"RED", "BLUE", "GREEN", "YELLOW", "BLACK", "BROWN", "WHITE", "PURPLE"})
     NUM_COLORS = 4
     _all_choices = list()
 
