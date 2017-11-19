@@ -141,9 +141,23 @@ def EvaluateStrategy(strategy):
                 break
         guess_counts[guess_count] += 1
     end = time.time()
-    return {"guesses" : guess_counts,
+    minv = None
+    maxv = None
+    median = None
+    total = 0
+    for count in xrange(-1,Board.GUESS_COUNT+1):
+        if guess_counts[count] > 0 and minv is None:
+            minv = count
+        if guess_counts[count] > 0:
+            maxv = count
+        total += guess_counts[count]
+        if total > board_count / 2 and median is None:
+            median = count
+    return {"correct_min" : minv,
+            "correct_max" : maxv,
+            "correct_median" : median,
             "time" : end - start,
-            "success" : 1 - (1.0*guess_counts[-1]/board_count)}
+            "success_rate" : 1 - (1.0*guess_counts[-1]/board_count)}
     
 
 def TestScoreChoice():
